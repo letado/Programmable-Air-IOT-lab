@@ -1,0 +1,1504 @@
+[
+  {
+    "id": "pa_v6_tab",
+    "type": "tab",
+    "label": "Programmable-Air V6",
+    "disabled": false,
+    "info": "Programmable-Air V6 using node-red-contrib-modbus client and pyModbusTCP gateway"
+  },
+  {
+    "id": "pa_v6_ui_tab",
+    "type": "ui_tab",
+    "name": "Programmable-Air V6",
+    "icon": "dashboard",
+    "order": 1
+  },
+  {
+    "id": "pa_v6_grp_overview",
+    "type": "ui_group",
+    "name": "Overview",
+    "tab": "pa_v6_ui_tab",
+    "order": 1,
+    "disp": true,
+    "width": "12",
+    "collapse": false
+  },
+  {
+    "id": "pa_v6_grp_process",
+    "type": "ui_group",
+    "name": "Process Status",
+    "tab": "pa_v6_ui_tab",
+    "order": 2,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "pa_v6_grp_board",
+    "type": "ui_group",
+    "name": "Board Mimic",
+    "tab": "pa_v6_ui_tab",
+    "order": 3,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "pa_v6_grp_control",
+    "type": "ui_group",
+    "name": "Process Control",
+    "tab": "pa_v6_ui_tab",
+    "order": 4,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "pa_v6_grp_valves",
+    "type": "ui_group",
+    "name": "Valve Test Panel",
+    "tab": "pa_v6_ui_tab",
+    "order": 5,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "pa_v6_grp_events",
+    "type": "ui_group",
+    "name": "Trend / Events",
+    "tab": "pa_v6_ui_tab",
+    "order": 6,
+    "disp": true,
+    "width": "12",
+    "collapse": false
+  },
+  {
+    "id": "pa_v6_modbus_client",
+    "type": "modbus-client",
+    "name": "PA Gateway",
+    "clienttype": "tcp",
+    "bufferCommands": true,
+    "stateLogEnabled": false,
+    "queueLogEnabled": false,
+    "failureLogEnabled": true,
+    "tcpHost": "127.0.0.1",
+    "tcpPort": "15020",
+    "tcpType": "DEFAULT",
+    "serialPort": "/dev/ttyUSB0",
+    "serialType": "RTU-BUFFERD",
+    "serialBaudrate": "9600",
+    "serialDatabits": "8",
+    "serialStopbits": "1",
+    "serialParity": "none",
+    "serialConnectionDelay": "100",
+    "unit_id": 1,
+    "commandDelay": 1,
+    "clientTimeout": 2000,
+    "reconnectOnTimeout": true,
+    "reconnectTimeout": 1000,
+    "parallelUnitIdsAllowed": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "showLogs": false
+  },
+  {
+    "id": "pa_v6_comment",
+    "type": "comment",
+    "z": "pa_v6_tab",
+    "name": "Contrib-Modbus V6",
+    "info": "Read Holding Registers 0..12 and write coils 1..7",
+    "x": 150,
+    "y": 20,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_mb_read",
+    "type": "modbus-read",
+    "z": "pa_v6_tab",
+    "name": "PA_MB_READ",
+    "showStatusActivities": true,
+    "logIOActivities": false,
+    "showErrors": true,
+    "showWarnings": true,
+    "unitid": "1",
+    "dataType": "HoldingRegister",
+    "adr": "0",
+    "quantity": "13",
+    "rate": "500",
+    "rateUnit": "ms",
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "server": "pa_v6_modbus_client",
+    "useIOFile": false,
+    "ioFile": "",
+    "useIOForPayload": false,
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": false,
+    "x": 150,
+    "y": 120,
+    "wires": [
+      [],
+      [
+        "pa_v6_mb_read_debug",
+        "pa_v6_decode",
+        "pa_v6_poll_log_fn"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_mb_read_debug",
+    "type": "debug",
+    "z": "pa_v6_tab",
+    "name": "MB_READ Debug",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 400,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_decode",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "PA_DECODE",
+    "func": "let d = null;\n\nif (Array.isArray(msg.payload)) {\n    d = msg.payload;\n} else if (msg.payload && Array.isArray(msg.payload.data)) {\n    d = msg.payload.data;\n} else if (msg.payload && Array.isArray(msg.payload.payload)) {\n    d = msg.payload.payload;\n}\n\nif (!d || d.length < 13) {\n    node.warn('Decode failed or payload too short');\n    return null;\n}\n\nconst pa = {\n    PV: Number(d[0]),\n    DIFF: Number(d[1]),\n    STATE: Number(d[2]),\n    ALARM: Number(d[3]),\n    SRC: Number(d[4]),\n    P1: Number(d[5]),\n    P2: Number(d[6]),\n    VL1: Number(d[7]),\n    VL2: Number(d[8]),\n    VL3: Number(d[9]),\n    VR1: Number(d[10]),\n    VR2: Number(d[11]),\n    VR3: Number(d[12])\n};\n\nglobal.set('pa', pa);\n\nreturn [\n  {payload: pa.PV},\n  {payload: pa.DIFF},\n  {payload: pa.STATE},\n  {payload: pa.ALARM},\n  {payload: pa.SRC},\n  {payload: pa.P1},\n  {payload: pa.P2},\n  {payload: pa.VL1},\n  {payload: pa.VL2},\n  {payload: pa.VL3},\n  {payload: pa.VR1},\n  {payload: pa.VR2},\n  {payload: pa.VR3}\n];",
+    "outputs": 13,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 120,
+    "wires": [
+      [
+        "pa_v6_pv_gauge",
+        "pa_v6_pv_text",
+        "pa_v6_pv_chart",
+        "pa_v6_pv_debug"
+      ],
+      [
+        "pa_v6_diff_text",
+        "pa_v6_diff_chart"
+      ],
+      [
+        "pa_v6_state_text_fn",
+        "pa_v6_overview_fn",
+        "pa_v6_state_current_fn"
+      ],
+      [
+        "pa_v6_alarm_text_fn",
+        "pa_v6_overview_fn",
+        "pa_v6_alarm_current_fn",
+        "pa_v6_alert_fn"
+      ],
+      [
+        "pa_v6_src_text_fn",
+        "pa_v6_src_current_fn"
+      ],
+      [
+        "pa_v6_p1_fn"
+      ],
+      [
+        "pa_v6_p2_fn"
+      ],
+      [
+        "pa_v6_vl1_fn"
+      ],
+      [
+        "pa_v6_vl2_fn"
+      ],
+      [
+        "pa_v6_vl3_fn"
+      ],
+      [
+        "pa_v6_vr1_fn"
+      ],
+      [
+        "pa_v6_vr2_fn"
+      ],
+      [
+        "pa_v6_vr3_fn"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_pv_debug",
+    "type": "debug",
+    "z": "pa_v6_tab",
+    "name": "PV Debug",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 620,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_overview_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Overview Banner",
+    "func": "const pa = global.get('pa') || {};\nconst state = pa.STATE;\nconst alarm = pa.ALARM;\n\nif (alarm === 1) {\n  msg.payload = 'ALARM';\n} else if (state === 0) {\n  msg.payload = 'IDLE';\n} else if (state === 1) {\n  msg.payload = 'CONTRACTING';\n} else if (state === 2) {\n  msg.payload = 'EXPANDING';\n} else if (state === 3) {\n  msg.payload = 'LIMIT_REACHED';\n} else {\n  msg.payload = 'UNKNOWN';\n}\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 120,
+    "wires": [
+      [
+        "pa_v6_overview_text"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_overview_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_overview",
+    "order": 1,
+    "width": "6",
+    "height": "1",
+    "name": "",
+    "label": "System Overview",
+    "format": "{{msg.payload}}",
+    "layout": "row-center",
+    "className": "",
+    "x": 890,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_alert_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Alert Text",
+    "func": "msg.payload = msg.payload === 1 ? 'HIGH_PRESSURE ACTIVE' : 'NO ACTIVE ALARM';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 160,
+    "wires": [
+      [
+        "pa_v6_alert_text"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_alert_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_overview",
+    "order": 2,
+    "width": "6",
+    "height": "1",
+    "name": "",
+    "label": "Process Alert",
+    "format": "{{msg.payload}}",
+    "layout": "row-center",
+    "className": "",
+    "x": 890,
+    "y": 160,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_pv_gauge",
+    "type": "ui_gauge",
+    "z": "pa_v6_tab",
+    "name": "",
+    "group": "pa_v6_grp_process",
+    "order": 1,
+    "width": "3",
+    "height": "3",
+    "gtype": "gage",
+    "title": "PV",
+    "label": "",
+    "format": "{{value}}",
+    "min": 0,
+    "max": "1023",
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "",
+    "seg2": "",
+    "diff": false,
+    "className": "",
+    "x": 640,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_pv_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_process",
+    "order": 2,
+    "width": "3",
+    "height": "1",
+    "name": "",
+    "label": "PV",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 640,
+    "y": 280,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_diff_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_process",
+    "order": 3,
+    "width": "3",
+    "height": "1",
+    "name": "",
+    "label": "DIFF",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 640,
+    "y": 320,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_state_text_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "STATE Text",
+    "func": "const states = {0:'IDLE',1:'CONTRACTING',2:'EXPANDING',3:'LIMIT_REACHED'};\nmsg.payload = states[msg.payload] || 'UNKNOWN';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 360,
+    "wires": [
+      [
+        "pa_v6_state_text",
+        "pa_v6_state_log_rbe"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_state_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_process",
+    "order": 4,
+    "width": "3",
+    "height": "1",
+    "name": "",
+    "label": "STATE",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 890,
+    "y": 360,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_alarm_text_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "ALARM Text",
+    "func": "const alarms = {0:'NORMAL',1:'HIGH_PRESSURE'};\nmsg.payload = alarms[msg.payload] || 'UNKNOWN';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 400,
+    "wires": [
+      [
+        "pa_v6_alarm_text",
+        "pa_v6_alarm_log_rbe"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_alarm_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_process",
+    "order": 5,
+    "width": "3",
+    "height": "1",
+    "name": "",
+    "label": "ALARM",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 890,
+    "y": 400,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_src_text_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "SRC Text",
+    "func": "const src = {0:'LOCAL_BUTTON',1:'SCADA_HMI'};\nmsg.payload = src[msg.payload] || 'UNKNOWN';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 440,
+    "wires": [
+      [
+        "pa_v6_src_text"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_src_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_process",
+    "order": 6,
+    "width": "3",
+    "height": "1",
+    "name": "",
+    "label": "SRC",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 890,
+    "y": 440,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_p1_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "P1 Text",
+    "func": "msg.payload = msg.payload === 1 ? 'ON' : 'OFF';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 520,
+    "wires": [
+      [
+        "pa_v6_p1_text"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_p1_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_board",
+    "order": 1,
+    "width": "3",
+    "height": "1",
+    "name": "",
+    "label": "P1",
+    "format": "{{msg.payload}}",
+    "layout": "row-center",
+    "className": "",
+    "x": 890,
+    "y": 520,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_p2_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "P2 Text",
+    "func": "msg.payload = msg.payload === 1 ? 'ON' : 'OFF';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 560,
+    "wires": [
+      [
+        "pa_v6_p2_text"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_p2_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_board",
+    "order": 2,
+    "width": "3",
+    "height": "1",
+    "name": "",
+    "label": "P2",
+    "format": "{{msg.payload}}",
+    "layout": "row-center",
+    "className": "",
+    "x": 890,
+    "y": 560,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_vl1_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "VL1 Text",
+    "func": "msg.payload = msg.payload === 1 ? 'OPEN' : 'OFF';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 600,
+    "wires": [
+      [
+        "pa_v6_vl1_text"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_vl1_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_board",
+    "order": 3,
+    "width": "2",
+    "height": "1",
+    "name": "",
+    "label": "VL1",
+    "format": "{{msg.payload}}",
+    "layout": "row-left",
+    "className": "",
+    "x": 890,
+    "y": 600,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_vl2_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "VL2 Text",
+    "func": "msg.payload = msg.payload === 1 ? 'OPEN' : 'OFF';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 640,
+    "wires": [
+      [
+        "pa_v6_vl2_text"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_vl2_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_board",
+    "order": 4,
+    "width": "2",
+    "height": "1",
+    "name": "",
+    "label": "VL2",
+    "format": "{{msg.payload}}",
+    "layout": "row-left",
+    "className": "",
+    "x": 890,
+    "y": 640,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_vl3_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "VL3 Text",
+    "func": "msg.payload = msg.payload === 1 ? 'OPEN' : 'OFF';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 680,
+    "wires": [
+      [
+        "pa_v6_vl3_text"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_vl3_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_board",
+    "order": 5,
+    "width": "2",
+    "height": "1",
+    "name": "",
+    "label": "VL3",
+    "format": "{{msg.payload}}",
+    "layout": "row-left",
+    "className": "",
+    "x": 890,
+    "y": 680,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_vr1_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "VR1 Text",
+    "func": "msg.payload = msg.payload === 1 ? 'OPEN' : 'OFF';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 720,
+    "wires": [
+      [
+        "pa_v6_vr1_text"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_vr1_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_board",
+    "order": 6,
+    "width": "2",
+    "height": "1",
+    "name": "",
+    "label": "VR1",
+    "format": "{{msg.payload}}",
+    "layout": "row-right",
+    "className": "",
+    "x": 890,
+    "y": 720,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_vr2_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "VR2 Text",
+    "func": "msg.payload = msg.payload === 1 ? 'OPEN' : 'OFF';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 760,
+    "wires": [
+      [
+        "pa_v6_vr2_text"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_vr2_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_board",
+    "order": 7,
+    "width": "2",
+    "height": "1",
+    "name": "",
+    "label": "VR2",
+    "format": "{{msg.payload}}",
+    "layout": "row-right",
+    "className": "",
+    "x": 890,
+    "y": 760,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_vr3_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "VR3 Text",
+    "func": "msg.payload = msg.payload === 1 ? 'OPEN' : 'OFF';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 800,
+    "wires": [
+      [
+        "pa_v6_vr3_text"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_vr3_text",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_board",
+    "order": 8,
+    "width": "2",
+    "height": "1",
+    "name": "",
+    "label": "VR3",
+    "format": "{{msg.payload}}",
+    "layout": "row-right",
+    "className": "",
+    "x": 890,
+    "y": 800,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_state_current_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Current STATE",
+    "func": "const states = {0:'IDLE',1:'CONTRACTING',2:'EXPANDING',3:'LIMIT_REACHED'};\nmsg.payload = 'STATE: ' + (states[msg.payload] || 'UNKNOWN');\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 880,
+    "wires": [
+      [
+        "pa_v6_state_current"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_state_current",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_events",
+    "order": 3,
+    "width": "4",
+    "height": "1",
+    "name": "",
+    "label": "Current State",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 890,
+    "y": 880,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_alarm_current_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Current ALARM",
+    "func": "const alarms = {0:'NORMAL',1:'HIGH_PRESSURE'};\nmsg.payload = 'ALARM: ' + (alarms[msg.payload] || 'UNKNOWN');\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 920,
+    "wires": [
+      [
+        "pa_v6_alarm_current"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_alarm_current",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_events",
+    "order": 4,
+    "width": "4",
+    "height": "1",
+    "name": "",
+    "label": "Current Alarm",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 890,
+    "y": 920,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_src_current_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Current SRC",
+    "func": "const src = {0:'LOCAL_BUTTON',1:'SCADA_HMI'};\nmsg.payload = 'SRC: ' + (src[msg.payload] || 'UNKNOWN');\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 640,
+    "y": 960,
+    "wires": [
+      [
+        "pa_v6_src_current"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_src_current",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_events",
+    "order": 5,
+    "width": "4",
+    "height": "1",
+    "name": "",
+    "label": "Current Source",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 890,
+    "y": 960,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_pv_chart",
+    "type": "ui_chart",
+    "z": "pa_v6_tab",
+    "name": "PV Trend",
+    "group": "pa_v6_grp_events",
+    "order": 1,
+    "width": "6",
+    "height": "4",
+    "label": "PV Trend",
+    "chartType": "line",
+    "legend": "false",
+    "xformat": "HH:mm:ss",
+    "interpolate": "linear",
+    "nodata": "",
+    "dot": false,
+    "ymin": "",
+    "ymax": "",
+    "removeOlder": "5",
+    "removeOlderPoints": "",
+    "removeOlderUnit": "60",
+    "cutout": 0,
+    "useOneColor": false,
+    "useUTC": false,
+    "colors": [
+      "#1f77b4"
+    ],
+    "outputs": 1,
+    "className": "",
+    "x": 640,
+    "y": 1000,
+    "wires": [
+      [],
+      []
+    ]
+  },
+  {
+    "id": "pa_v6_diff_chart",
+    "type": "ui_chart",
+    "z": "pa_v6_tab",
+    "name": "DIFF Trend",
+    "group": "pa_v6_grp_events",
+    "order": 2,
+    "width": "6",
+    "height": "4",
+    "label": "DIFF Trend",
+    "chartType": "line",
+    "legend": "false",
+    "xformat": "HH:mm:ss",
+    "interpolate": "linear",
+    "nodata": "",
+    "dot": false,
+    "ymin": "",
+    "ymax": "",
+    "removeOlder": "5",
+    "removeOlderPoints": "",
+    "removeOlderUnit": "60",
+    "cutout": 0,
+    "useOneColor": false,
+    "useUTC": false,
+    "colors": [
+      "#ff7f0e"
+    ],
+    "outputs": 1,
+    "className": "",
+    "x": 640,
+    "y": 1040,
+    "wires": [
+      [],
+      []
+    ]
+  },
+  {
+    "id": "pa_v6_btn_contract",
+    "type": "ui_button",
+    "z": "pa_v6_tab",
+    "name": "",
+    "group": "pa_v6_grp_control",
+    "order": 1,
+    "width": "2",
+    "height": "1",
+    "passthru": false,
+    "label": "Contract",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "1",
+    "payloadType": "num",
+    "topic": "",
+    "x": 150,
+    "y": 520,
+    "wires": [
+      [
+        "pa_v6_fn_contract"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_fn_contract",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Contract Action",
+    "func": "const writeMsg = {\n  payload: {\n    value: true,\n    fc: 5,\n    unitid: 1,\n    address: 1,\n    quantity: 1\n  }\n};\nconst eventMsg = { payload: 'LAST CMD: CONTRACT' };\nconst logMsg = {\n  source: 'SCADA',\n  log_type: 'WRITE',\n  fc: 'FC5',\n  address: '1',\n  log_value: 'true',\n  log_status: 'SENT',\n  log_message: 'CONTRACT command issued'\n};\nreturn [writeMsg, eventMsg, logMsg];",
+    "outputs": 3,
+    "noerr": 0,
+    "x": 400,
+    "y": 520,
+    "wires": [
+      [
+        "pa_v6_mb_write",
+        "pa_v6_write_payload_debug"
+      ],
+      [
+        "pa_v6_last_command"
+      ],
+      [
+        "pa_v6_log_formatter"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_btn_expand",
+    "type": "ui_button",
+    "z": "pa_v6_tab",
+    "name": "",
+    "group": "pa_v6_grp_control",
+    "order": 2,
+    "width": "2",
+    "height": "1",
+    "passthru": false,
+    "label": "Expand",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "1",
+    "payloadType": "num",
+    "topic": "",
+    "x": 150,
+    "y": 560,
+    "wires": [
+      [
+        "pa_v6_fn_expand"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_fn_expand",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Expand Action",
+    "func": "const writeMsg = {\n  payload: {\n    value: true,\n    fc: 5,\n    unitid: 1,\n    address: 2,\n    quantity: 1\n  }\n};\nconst eventMsg = { payload: 'LAST CMD: EXPAND' };\nconst logMsg = {\n  source: 'SCADA',\n  log_type: 'WRITE',\n  fc: 'FC5',\n  address: '2',\n  log_value: 'true',\n  log_status: 'SENT',\n  log_message: 'EXPAND command issued'\n};\nreturn [writeMsg, eventMsg, logMsg];",
+    "outputs": 3,
+    "noerr": 0,
+    "x": 400,
+    "y": 560,
+    "wires": [
+      [
+        "pa_v6_mb_write",
+        "pa_v6_write_payload_debug"
+      ],
+      [
+        "pa_v6_last_command"
+      ],
+      [
+        "pa_v6_log_formatter"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_btn_stop",
+    "type": "ui_button",
+    "z": "pa_v6_tab",
+    "name": "",
+    "group": "pa_v6_grp_control",
+    "order": 3,
+    "width": "2",
+    "height": "1",
+    "passthru": false,
+    "label": "Stop",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "1",
+    "payloadType": "num",
+    "topic": "",
+    "x": 150,
+    "y": 600,
+    "wires": [
+      [
+        "pa_v6_fn_stop"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_fn_stop",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Stop Action",
+    "func": "const writeMsg = {\n  payload: {\n    value: true,\n    fc: 5,\n    unitid: 1,\n    address: 3,\n    quantity: 1\n  }\n};\nconst eventMsg = { payload: 'LAST CMD: STOP' };\nconst logMsg = {\n  source: 'SCADA',\n  log_type: 'WRITE',\n  fc: 'FC5',\n  address: '3',\n  log_value: 'true',\n  log_status: 'SENT',\n  log_message: 'STOP command issued'\n};\nreturn [writeMsg, eventMsg, logMsg];",
+    "outputs": 3,
+    "noerr": 0,
+    "x": 400,
+    "y": 600,
+    "wires": [
+      [
+        "pa_v6_mb_write",
+        "pa_v6_write_payload_debug"
+      ],
+      [
+        "pa_v6_last_command"
+      ],
+      [
+        "pa_v6_log_formatter"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_btn_v1",
+    "type": "ui_button",
+    "z": "pa_v6_tab",
+    "name": "",
+    "group": "pa_v6_grp_valves",
+    "order": 1,
+    "width": "2",
+    "height": "1",
+    "passthru": false,
+    "label": "Valve 1 Test",
+    "tooltip": "VENT",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "1",
+    "payloadType": "num",
+    "topic": "",
+    "x": 150,
+    "y": 700,
+    "wires": [
+      [
+        "pa_v6_fn_v1"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_fn_v1",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Valve1 VENT",
+    "func": "const writeMsg = {\n  payload: {\n    value: true,\n    fc: 5,\n    unitid: 1,\n    address: 4,\n    quantity: 1\n  }\n};\nconst eventMsg = { payload: 'LAST CMD: VALVE1 / VENT' };\nconst logMsg = {\n  source: 'SCADA',\n  log_type: 'WRITE',\n  fc: 'FC5',\n  address: '4',\n  log_value: 'true',\n  log_status: 'SENT',\n  log_message: 'VALVE1 / VENT command issued'\n};\nreturn [writeMsg, eventMsg, logMsg];",
+    "outputs": 3,
+    "noerr": 0,
+    "x": 400,
+    "y": 700,
+    "wires": [
+      [
+        "pa_v6_mb_write",
+        "pa_v6_write_payload_debug"
+      ],
+      [
+        "pa_v6_last_command"
+      ],
+      [
+        "pa_v6_log_formatter"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_btn_v2",
+    "type": "ui_button",
+    "z": "pa_v6_tab",
+    "name": "",
+    "group": "pa_v6_grp_valves",
+    "order": 2,
+    "width": "2",
+    "height": "1",
+    "passthru": false,
+    "label": "Valve 2 Test",
+    "tooltip": "BLOW",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "1",
+    "payloadType": "num",
+    "topic": "",
+    "x": 150,
+    "y": 740,
+    "wires": [
+      [
+        "pa_v6_fn_v2"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_fn_v2",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Valve2 BLOW",
+    "func": "const writeMsg = {\n  payload: {\n    value: true,\n    fc: 5,\n    unitid: 1,\n    address: 5,\n    quantity: 1\n  }\n};\nconst eventMsg = { payload: 'LAST CMD: VALVE2 / BLOW' };\nconst logMsg = {\n  source: 'SCADA',\n  log_type: 'WRITE',\n  fc: 'FC5',\n  address: '5',\n  log_value: 'true',\n  log_status: 'SENT',\n  log_message: 'VALVE2 / BLOW command issued'\n};\nreturn [writeMsg, eventMsg, logMsg];",
+    "outputs": 3,
+    "noerr": 0,
+    "x": 400,
+    "y": 740,
+    "wires": [
+      [
+        "pa_v6_mb_write",
+        "pa_v6_write_payload_debug"
+      ],
+      [
+        "pa_v6_last_command"
+      ],
+      [
+        "pa_v6_log_formatter"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_btn_v3",
+    "type": "ui_button",
+    "z": "pa_v6_tab",
+    "name": "",
+    "group": "pa_v6_grp_valves",
+    "order": 3,
+    "width": "2",
+    "height": "1",
+    "passthru": false,
+    "label": "Valve 3 Test",
+    "tooltip": "SUCK",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "1",
+    "payloadType": "num",
+    "topic": "",
+    "x": 150,
+    "y": 780,
+    "wires": [
+      [
+        "pa_v6_fn_v3"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_fn_v3",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Valve3 SUCK",
+    "func": "const writeMsg = {\n  payload: {\n    value: true,\n    fc: 5,\n    unitid: 1,\n    address: 6,\n    quantity: 1\n  }\n};\nconst eventMsg = { payload: 'LAST CMD: VALVE3 / SUCK' };\nconst logMsg = {\n  source: 'SCADA',\n  log_type: 'WRITE',\n  fc: 'FC5',\n  address: '6',\n  log_value: 'true',\n  log_status: 'SENT',\n  log_message: 'VALVE3 / SUCK command issued'\n};\nreturn [writeMsg, eventMsg, logMsg];",
+    "outputs": 3,
+    "noerr": 0,
+    "x": 400,
+    "y": 780,
+    "wires": [
+      [
+        "pa_v6_mb_write",
+        "pa_v6_write_payload_debug"
+      ],
+      [
+        "pa_v6_last_command"
+      ],
+      [
+        "pa_v6_log_formatter"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_btn_close",
+    "type": "ui_button",
+    "z": "pa_v6_tab",
+    "name": "",
+    "group": "pa_v6_grp_valves",
+    "order": 4,
+    "width": "2",
+    "height": "1",
+    "passthru": false,
+    "label": "Close Valves",
+    "tooltip": "CLOSE",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "1",
+    "payloadType": "num",
+    "topic": "",
+    "x": 150,
+    "y": 820,
+    "wires": [
+      [
+        "pa_v6_fn_close"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_fn_close",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Close Valves",
+    "func": "const writeMsg = {\n  payload: {\n    value: true,\n    fc: 5,\n    unitid: 1,\n    address: 7,\n    quantity: 1\n  }\n};\nconst eventMsg = { payload: 'LAST CMD: CLOSE VALVES' };\nconst logMsg = {\n  source: 'SCADA',\n  log_type: 'WRITE',\n  fc: 'FC5',\n  address: '7',\n  log_value: 'true',\n  log_status: 'SENT',\n  log_message: 'CLOSE VALVES command issued'\n};\nreturn [writeMsg, eventMsg, logMsg];",
+    "outputs": 3,
+    "noerr": 0,
+    "x": 400,
+    "y": 820,
+    "wires": [
+      [
+        "pa_v6_mb_write",
+        "pa_v6_write_payload_debug"
+      ],
+      [
+        "pa_v6_last_command"
+      ],
+      [
+        "pa_v6_log_formatter"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_last_command",
+    "type": "ui_text",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_events",
+    "order": 6,
+    "width": "4",
+    "height": "1",
+    "name": "",
+    "label": "Last Command",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 640,
+    "y": 880,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_write_payload_debug",
+    "type": "debug",
+    "z": "pa_v6_tab",
+    "name": "WRITE Payload Debug",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 650,
+    "y": 600,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_mb_write",
+    "type": "modbus-flex-write",
+    "z": "pa_v6_tab",
+    "name": "PA_MB_WRITE",
+    "showStatusActivities": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "server": "pa_v6_modbus_client",
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": false,
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "x": 650,
+    "y": 640,
+    "wires": [
+      [],
+      [
+        "pa_v6_write_debug",
+        "pa_v6_write_result_log_fn"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_write_debug",
+    "type": "debug",
+    "z": "pa_v6_tab",
+    "name": "WRITE Result Debug",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "true",
+    "targetType": "full",
+    "x": 900,
+    "y": 640,
+    "wires": []
+  },
+  {
+    "id": "pa_v6_grp_modbus_log",
+    "type": "ui_group",
+    "name": "Modbus / TCP Event Log",
+    "tab": "pa_v6_ui_tab",
+    "order": 7,
+    "disp": true,
+    "width": "12",
+    "collapse": false
+  },
+  {
+    "id": "pa_v6_poll_log_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Poll Log Builder",
+    "func": "msg.source = 'SCADA';\nmsg.log_type = 'READ';\nmsg.fc = 'FC3';\nmsg.address = '0-12';\nmsg.log_value = '13 regs';\nmsg.log_status = 'OK';\nmsg.log_message = 'Holding registers polled';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 400,
+    "y": 180,
+    "wires": [
+      [
+        "pa_v6_poll_log_delay"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_poll_log_delay",
+    "type": "delay",
+    "z": "pa_v6_tab",
+    "name": "Poll Log Rate Limit",
+    "pauseType": "rate",
+    "timeout": "5",
+    "timeoutUnits": "seconds",
+    "rate": "1",
+    "nbRateUnits": "5",
+    "rateUnits": "second",
+    "randomFirst": "1",
+    "randomLast": "5",
+    "randomUnits": "seconds",
+    "drop": true,
+    "allowrate": false,
+    "outputs": 1,
+    "x": 650,
+    "y": 180,
+    "wires": [
+      [
+        "pa_v6_log_formatter"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_state_log_rbe",
+    "type": "rbe",
+    "z": "pa_v6_tab",
+    "name": "State Change Only",
+    "func": "rbe",
+    "gap": "",
+    "start": "",
+    "inout": "out",
+    "septopics": false,
+    "property": "payload",
+    "topi": "topic",
+    "x": 650,
+    "y": 360,
+    "wires": [
+      [
+        "pa_v6_state_log_builder"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_state_log_builder",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "State Log Builder",
+    "func": "msg.source = 'SCADA';\nmsg.log_type = 'STATE';\nmsg.fc = 'FC3';\nmsg.address = '2';\nmsg.log_value = msg.payload;\nmsg.log_status = 'OK';\nmsg.log_message = 'Process state changed';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 900,
+    "y": 360,
+    "wires": [
+      [
+        "pa_v6_log_formatter"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_alarm_log_rbe",
+    "type": "rbe",
+    "z": "pa_v6_tab",
+    "name": "Alarm Change Only",
+    "func": "rbe",
+    "gap": "",
+    "start": "",
+    "inout": "out",
+    "septopics": false,
+    "property": "payload",
+    "topi": "topic",
+    "x": 650,
+    "y": 400,
+    "wires": [
+      [
+        "pa_v6_alarm_log_builder"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_alarm_log_builder",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Alarm Log Builder",
+    "func": "msg.source = 'SCADA';\nmsg.log_type = 'ALARM';\nmsg.fc = 'FC3';\nmsg.address = '3';\nmsg.log_value = msg.payload;\nmsg.log_status = (msg.payload === 'HIGH_PRESSURE') ? 'ALERT' : 'OK';\nmsg.log_message = 'Alarm state changed';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 900,
+    "y": 400,
+    "wires": [
+      [
+        "pa_v6_log_formatter"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_write_result_log_fn",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Write Result Log",
+    "func": "msg.source = 'SCADA';\nmsg.log_type = 'WRITE';\nmsg.fc = 'FC5';\nmsg.address = (msg.payload && msg.payload.address !== undefined) ? String(msg.payload.address) : '';\nmsg.log_value = (msg.payload && msg.payload.value !== undefined) ? String(msg.payload.value) : '';\nmsg.log_status = 'ACK';\nmsg.log_message = 'Command write acknowledged';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 900,
+    "y": 640,
+    "wires": [
+      [
+        "pa_v6_log_formatter"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_log_formatter",
+    "type": "function",
+    "z": "pa_v6_tab",
+    "name": "Log Formatter",
+    "func": "let logs = flow.get('modbus_logs') || [];\nfunction nowTime() {\n    const d = new Date();\n    return d.toLocaleTimeString();\n}\nconst entry = {\n    time: nowTime(),\n    source: msg.source || 'SCADA',\n    type: msg.log_type || 'INFO',\n    fc: msg.fc || '',\n    address: msg.address || '',\n    value: msg.log_value !== undefined ? String(msg.log_value) : '',\n    status: msg.log_status || 'OK',\n    message: msg.log_message || ''\n};\nlogs.unshift(entry);\nlogs = logs.slice(0, 150);\nflow.set('modbus_logs', logs);\nmsg.payload = logs;\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 1160,
+    "y": 520,
+    "wires": [
+      [
+        "pa_v6_modbus_log_template"
+      ]
+    ]
+  },
+  {
+    "id": "pa_v6_modbus_log_template",
+    "type": "ui_template",
+    "z": "pa_v6_tab",
+    "group": "pa_v6_grp_modbus_log",
+    "name": "Modbus TCP Log Table",
+    "order": 1,
+    "width": "12",
+    "height": "10",
+    "format": "<div style=\"padding:8px; font-family:Arial, sans-serif; overflow:auto; max-height:430px;\">\n  <table style=\"width:100%; border-collapse:collapse; font-size:12px;\">\n    <thead style=\"position:sticky; top:0; background:#d9e2f2; z-index:1;\">\n      <tr style=\"border-bottom:1px solid #999;\">\n        <th style=\"text-align:left; padding:6px;\">Time</th>\n        <th style=\"text-align:left; padding:6px;\">Source</th>\n        <th style=\"text-align:left; padding:6px;\">Type</th>\n        <th style=\"text-align:left; padding:6px;\">FC</th>\n        <th style=\"text-align:left; padding:6px;\">Address</th>\n        <th style=\"text-align:left; padding:6px;\">Value</th>\n        <th style=\"text-align:left; padding:6px;\">Status</th>\n        <th style=\"text-align:left; padding:6px;\">Message</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"row in msg.payload track by $index\" style=\"border-bottom:1px solid #ddd;\">\n        <td style=\"padding:6px;\">{{row.time}}</td>\n        <td style=\"padding:6px;\">{{row.source}}</td>\n        <td style=\"padding:6px;\">{{row.type}}</td>\n        <td style=\"padding:6px;\">{{row.fc}}</td>\n        <td style=\"padding:6px;\">{{row.address}}</td>\n        <td style=\"padding:6px; word-break:break-all;\">{{row.value}}</td>\n        <td style=\"padding:6px;\">{{row.status}}</td>\n        <td style=\"padding:6px;\">{{row.message}}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>",
+    "storeOutMessages": false,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1410,
+    "y": 520,
+    "wires": [
+      []
+    ]
+  }
+]
